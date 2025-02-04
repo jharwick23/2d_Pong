@@ -26,12 +26,13 @@ int main()
     // Create computer paddle
     sf::RectangleShape compPaddle(sf::Vector2f(50.f, 5.f));
     compPaddle.setFillColor(sf::Color::White);
-    compPaddle.setOrigin(50.f, 10.f);
+    compPaddle.setOrigin(compPaddle.getSize().x / 2, compPaddle.getSize().y / 2);
     compPaddle.setRotation(90.f);
     compPaddle.setPosition(760.f, 300.f);
 
     // Create the ball
-    sf::CircleShape ball(5.f);
+    const float ballRadius = 5.f;
+    sf::CircleShape ball(ballRadius);
     ball.setFillColor(sf::Color::White);
     ball.setOrigin(10.f, 10.f);
     ball.setPosition(400.f, 300.f);
@@ -39,7 +40,10 @@ int main()
     // Initial velocity of the ball moving left
     sf::Vector2f velocity(-0.5f, 0.f);
 
+    // maxBounceAngle for ball
     const float maxBounceAngle = 75.f * 3.14159f / 180.f;
+    // AI paddle speed
+    const float aiSpeed = 0.5f;
 
     // Main loop ends when window is closed
     while (window.isOpen())
@@ -74,6 +78,24 @@ int main()
 
         // Set only the Y position, keeping X fixed
         userPaddle.setPosition(userPaddle.getPosition().x, newY);
+
+        // Ai paddle movement logic
+        float compPaddleCenter = compPaddle.getPosition().y;
+        float ballCenter = ball.getPosition().y + ballRadius;
+
+        // Move the AI paddle towards the ball
+        if (ballCenter < compPaddleCenter)
+        {
+            compPaddle.move(0, -aiSpeed);
+        }
+        else if (ballCenter > compPaddleCenter)
+        {
+            compPaddle.move(0, aiSpeed);
+        }
+
+        sf::Vector2f compPos = compPaddle.getPosition();
+        compPos.y = std::clamp(compPos.y, topBound, bottomBound);
+        compPaddle.setPosition(compPos);
 
         // Update ball position
         ball.move(velocity);
