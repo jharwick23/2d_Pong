@@ -1,4 +1,5 @@
 #include <SFML/Graphics.hpp>
+#include <SFML/Audio.hpp>
 #include <iostream>
 #include <cmath>
 
@@ -13,6 +14,27 @@ void resetGame(sf::CircleShape &ball, sf::Vector2f &velocity, const sf::Vector2u
 
 int main()
 {
+    int userScore = 0;
+    int compScore = 0;
+
+    // Load sounds
+    sf::SoundBuffer paddleHitBuffer, winBuffer;
+    if (!paddleHitBuffer.loadFromFile("paddle.wav"))
+    {
+        std::cerr << "Error loading paddle.wav" << std::endl;
+    }
+    if (!winBuffer.loadFromFile("win.wav"))
+    {
+        std::cerr << "Error loading win.wav" << std::endl;
+    }
+
+    sf::Sound paddleHitSound, winSound;
+    paddleHitSound.setBuffer(paddleHitBuffer);
+    winSound.setBuffer(winBuffer);
+
+    paddleHitSound.setVolume(10.f);
+    winSound.setVolume(10.f);
+
     // Create a window with a default resolution of 800x600
     sf::RenderWindow window(sf::VideoMode(800, 600), "Pong");
 
@@ -128,6 +150,8 @@ int main()
             // For the left paddle, the ball should travel to the right.
             velocity.x = speed * std::cos(bounceAngle);
             velocity.y = -speed * std::sin(bounceAngle);
+
+            paddleHitSound.play();
         }
 
         // Computer paddle collision
@@ -146,11 +170,25 @@ int main()
             // For the right paddle, the ball should travel to the left.
             velocity.x = -speed * std::cos(bounceAngle);
             velocity.y = -speed * std::sin(bounceAngle);
+
+            paddleHitSound.play();
         }
 
         if (ball.getPosition().x - ball.getRadius() < 0 ||
             ball.getPosition().x + ball.getRadius() > window.getSize().x)
         {
+            // If ball goes off the left side award computer a point
+            if (ball.getPosition().x - ball.getRadius() < 0)
+            {
+                compScore++;
+            }
+            // If ball goes off the right side aware user a point
+            else if (ball.getPosition().x + ball.getRadius() > window.getSize().x)
+            {
+                userScore++;
+            }
+            winSound.play();
+            std::cout << "User Score: " << userScore << " | Computer Score: " << compScore << std::endl;
             resetGame(ball, velocity, window.getSize());
         }
 
@@ -162,5 +200,5 @@ int main()
         window.display();
     }
 
-    return 0;
+    return EXIT_SUCCESS;
 }
