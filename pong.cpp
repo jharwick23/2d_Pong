@@ -1,5 +1,15 @@
 #include <SFML/Graphics.hpp>
 #include <iostream>
+#include <cmath>
+
+// Helper function to reset the game state.
+void resetGame(sf::CircleShape &ball, sf::Vector2f &velocity, const sf::Vector2u &windowSize)
+{
+    // Center the ball.
+    ball.setPosition(windowSize.x / 2.f, windowSize.y / 2.f);
+    // Reset the ball's velocity to its initial value.
+    velocity = sf::Vector2f(-0.5f, 0.f);
+}
 
 int main()
 {
@@ -7,24 +17,29 @@ int main()
     sf::RenderWindow window(sf::VideoMode(800, 600), "Pong");
 
     // Create user paddle
-    sf::RectangleShape userPaddle(sf::Vector2f(100.f, 20.f));
+    sf::RectangleShape userPaddle(sf::Vector2f(50.f, 5.f));
     userPaddle.setFillColor(sf::Color::White);
-    userPaddle.setOrigin(50.f, 10.f);
+    userPaddle.setOrigin(userPaddle.getSize().x / 2, userPaddle.getSize().y / 2);
     userPaddle.setRotation(90.f);
     userPaddle.setPosition(40.f, 300.f);
 
     // Create computer paddle
-    sf::RectangleShape compPaddle(sf::Vector2f(100.f, 20.f));
-    compPaddle.setFillColor(sf::Color::Red);
+    sf::RectangleShape compPaddle(sf::Vector2f(50.f, 5.f));
+    compPaddle.setFillColor(sf::Color::White);
     compPaddle.setOrigin(50.f, 10.f);
     compPaddle.setRotation(90.f);
     compPaddle.setPosition(760.f, 300.f);
 
     // Create the ball
-    sf::CircleShape ball(10.f);
-    ball.setFillColor(sf::Color::Blue);
+    sf::CircleShape ball(5.f);
+    ball.setFillColor(sf::Color::White);
     ball.setOrigin(10.f, 10.f);
     ball.setPosition(400.f, 300.f);
+
+    // Initial velocity of the ball moving left
+    sf::Vector2f velocity(-0.5f, 0.f);
+
+    const float maxBounceAngle = 75.f * 3.14159f / 180.f;
 
     // Main loop ends when window is closed
     while (window.isOpen())
@@ -42,25 +57,86 @@ int main()
             }
         }
 
+        // Define margin to keep whitespace from boundary
+        float margin = 10.f;
+
         // Get mouse position relative to the window
         sf::Vector2i mousePos = sf::Mouse::getPosition(window);
+        float newY = static_cast<float>(mousePos.y);
 
-        // Convert to float and set shape position
-        userPaddle.setPosition(static_cast<float>(mousePos.x), static_cast<float>(mousePos.y));
+        // Correct boundary limits considering the rotated paddle
+        float paddleHeight = userPaddle.getSize().x;
+        float topBound = margin + (paddleHeight / 2);
+        float bottomBound = 600.f - (paddleHeight / 2) - margin;
 
-        // Clear the window before rendering a new frame
+        // Clamp Y position correctly
+        newY = std::clamp(newY, topBound, bottomBound);
+
+        // Set only the Y position, keeping X fixed
+        userPaddle.setPosition(userPaddle.getPosition().x, newY);
+
+        // Update ball position
+        ball.move(velocity);
+
+        if (ball.getPosition().y - ball.getRadius() <= 0 ||
+            ball.getPosition().y + ball.getRadius() >= window.getSize().y)
+        {
+            velocity.y = -velocity.y;
+        }
+
+        // User paddle collision
+        if (ball.getGlobalBounds().intersects(userPaddle.getGlobalBounds()))
+        {
+            // Determine where on the paddle the ball hit:
+            float paddleCenterY = userPaddle.getPosition().y;
+            float ballY = ball.getPosition().y;
+            float relativeIntersectY = paddleCenterY - ballY; // positive if hit above the center
+
+            // Normalize (assume half the paddle's length is the maximum offset)
+            float paddleHalfLength = userPaddle.getSize().x / 2.f; // 25.f in this case
+            float normalizedRelativeIntersectionY = relativeIntersectY / paddleHalfLength;
+
+            // Calculate the bounce angle.
+            float bounceAngle = normalizedRelativeIntersectionY * maxBounceAngle;
+
+            // Increase the ball's speed a little
+            float speed = std::sqrt(velocity.x * velocity.x + velocity.y * velocity.y);
+            speed *= 1.05f;
+
+            // For the left paddle, the ball should travel to the right.
+            velocity.x = speed * std::cos(bounceAngle);
+            velocity.y = -speed * std::sin(bounceAngle);
+        }
+
+        // Computer paddle collision
+        else if (ball.getGlobalBounds().intersects(compPaddle.getGlobalBounds()))
+        {
+            float paddleCenterY = compPaddle.getPosition().y;
+            float ballY = ball.getPosition().y;
+            float relativeIntersectY = paddleCenterY - ballY;
+            float paddleHalfLength = compPaddle.getSize().x / 2.f;
+            float normalizedRelativeIntersectionY = relativeIntersectY / paddleHalfLength;
+            float bounceAngle = normalizedRelativeIntersectionY * maxBounceAngle;
+
+            float speed = std::sqrt(velocity.x * velocity.x + velocity.y * velocity.y);
+            speed *= 1.05f;
+
+            // For the right paddle, the ball should travel to the left.
+            velocity.x = -speed * std::cos(bounceAngle);
+            velocity.y = -speed * std::sin(bounceAngle);
+        }
+
+        if (ball.getPosition().x - ball.getRadius() < 0 ||
+            ball.getPosition().x + ball.getRadius() > window.getSize().x)
+        {
+            resetGame(ball, velocity, window.getSize());
+        }
+
+        // Rendering
         window.clear();
-
-        // Draw the user paddle
         window.draw(userPaddle);
-
-        // Draw the computer paddle
         window.draw(compPaddle);
-
-        // Draw the ball
         window.draw(ball);
-
-        // Display the updated frame
         window.display();
     }
 
