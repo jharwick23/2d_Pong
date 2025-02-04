@@ -78,7 +78,7 @@ g++ -g pong.cpp -o pong -lsfml-graphics -lsfml-window -lsfml-system -lsfml-audio
 
 ## GitHub Repository
 Find the latest version of this project on GitHub:
-[https://github.com/jharwick23/pong-project](https://github.com/jharwick23/pong-project)
+[https://github.com/jharwick23/2d_Pong](https://github.com/jharwick23/2d_Pong)
 
 ---
 
